@@ -208,6 +208,30 @@
     .chat-time {
       color: var(--text-secondary);
       font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .remove-friend-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 10px;
+      padding: 2px 4px;
+      border-radius: 3px;
+      opacity: 0;
+      transition: all 0.2s ease;
+    }
+
+    .chat-item:hover .remove-friend-btn {
+      opacity: 1;
+    }
+
+    .remove-friend-btn:hover {
+      background: #ff4444;
+      color: white;
     }
 
     /* MAIN CHAT AREA */

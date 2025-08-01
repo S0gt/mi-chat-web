@@ -291,8 +291,147 @@ function setupEventListeners() {
   if (userAvatar && currentUser) {
     userAvatar.textContent = currentUser.usuario.charAt(0).toUpperCase();
   }
+
+  // === BOTONES DE LOS DROPDOWNS ===
+  
+  // Botones del menú principal (dropdownMenu)
+  const perfilBtn = document.getElementById('perfilBtn');
+  const configBtn = document.getElementById('configBtn');
+  const personalizarBtn = document.getElementById('personalizarBtn');
+  
+  if (perfilBtn) {
+    perfilBtn.onclick = () => {
+      console.log('🙋‍♂️ Perfil clickeado');
+      showToast('info', 'Abriendo perfil...');
+      // TODO: Implementar ventana de perfil
+    };
+  }
+  
+  if (configBtn) {
+    configBtn.onclick = () => {
+      console.log('⚙️ Configuración clickeada');
+      showToast('info', 'Abriendo configuración...');
+      // TODO: Implementar ventana de configuración
+    };
+  }
+  
+  if (personalizarBtn) {
+    personalizarBtn.onclick = () => {
+      console.log('🎨 Personalizar clickeado');
+      showToast('info', 'Abriendo personalización...');
+      // TODO: Implementar ventana de personalización
+    };
+  }
+  
+  // Botones del menú agregar (addDropdown)
+  const iniciarChat = document.getElementById('iniciarChat');
+  const agregarUsuario = document.getElementById('agregarUsuario');
+  const crearGrupo = document.getElementById('crearGrupo');
+  
+  if (iniciarChat) {
+    iniciarChat.onclick = () => {
+      console.log('💬 Iniciar chat clickeado');
+      mostrarModalAgregarAmigo();
+    };
+  }
+  
+  if (agregarUsuario) {
+    agregarUsuario.onclick = () => {
+      console.log('👤 Agregar usuario clickeado');
+      mostrarModalAgregarAmigo();
+    };
+  }
+  
+  if (crearGrupo) {
+    crearGrupo.onclick = () => {
+      console.log('👥 Crear grupo clickeado');
+      showToast('info', 'Función de grupos próximamente...');
+      // TODO: Implementar creación de grupos
+    };
+  }
   
   console.log('✅ Event listeners configurados completamente');
+}
+
+// ========================================
+// SISTEMA DE AMIGOS
+// ========================================
+
+async function mostrarModalAgregarAmigo() {
+  const username = prompt('🤝 Ingresa el nombre de usuario que quieres agregar como amigo:');
+  
+  if (!username) return;
+  
+  if (username === currentUser.usuario) {
+    showToast('error', 'No puedes agregarte a ti mismo como amigo');
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/add-friend', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: currentUser.usuario,
+        friendUsername: username
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      showToast('success', `¡${username} agregado como amigo!`);
+      await cargarUsuarios(); // Recargar la lista
+    } else {
+      showToast('error', `Error: ${data.error}`);
+    }
+  } catch (error) {
+    console.error('Error agregando amigo:', error);
+    showToast('error', 'Error al agregar amigo');
+  }
+}
+
+async function removerAmigo(friendUsername) {
+  if (!confirm(`¿Estás seguro de que quieres remover a ${friendUsername} de tus amigos?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/remove-friend', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: currentUser.usuario,
+        friendUsername: friendUsername
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      showToast('success', `${friendUsername} removido de tus amigos`);
+      await cargarUsuarios(); // Recargar la lista
+      
+      // Si estaba chateando con ese amigo, limpiar chat
+      if (usuarioSeleccionado && usuarioSeleccionado.nombre === friendUsername) {
+        usuarioSeleccionado = null;
+        const chatHeader = document.getElementById('chatHeader');
+        const inputContainer = document.getElementById('inputContainer');
+        if (chatHeader) chatHeader.style.display = 'none';
+        if (inputContainer) inputContainer.style.display = 'none';
+        document.getElementById('mensajes').innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">Selecciona un amigo para chatear</div>';
+      }
+    } else {
+      showToast('error', `Error: ${data.error}`);
+    }
+  } catch (error) {
+    console.error('Error removiendo amigo:', error);
+    showToast('error', 'Error al remover amigo');
+  }
 }
 
 // ========================================
@@ -409,19 +548,26 @@ function enviarIndicadorEscribiendo(escribiendo) {
 
 async function cargarUsuarios() {
   try {
-    console.log('👥 Cargando usuarios...');
-    const response = await fetch('/api/users');
+    console.log('👥 Cargando amigos...');
+    
+    if (!currentUser) {
+      console.error('❌ No hay usuario actual para cargar amigos');
+      return;
+    }
+    
+    const response = await fetch(`/api/friends?username=${currentUser.usuario}`);
     const data = await response.json();
     
     if (data.success) {
-      mostrarUsuarios(data.users);
-      console.log(`✅ ${data.users.length} usuarios cargados`);
+      mostrarUsuarios(data.friends);
+      console.log(`✅ ${data.friends.length} amigos cargados`);
     } else {
-      console.error('Error cargando usuarios:', data.error);
+      console.error('Error cargando amigos:', data.error);
+      showToast('error', 'Error cargando lista de amigos');
     }
   } catch (error) {
-    console.error('Error cargando usuarios:', error);
-    showToast('error', 'Error al cargar usuarios');
+    console.error('Error cargando amigos:', error);
+    showToast('error', 'Error al cargar amigos');
   }
 }
 
@@ -431,7 +577,20 @@ function mostrarUsuarios(usuarios) {
   
   lista.innerHTML = '';
   
+  if (usuarios.length === 0) {
+    lista.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+        <p>🤝 No tienes amigos agregados</p>
+        <p style="font-size: 12px; margin-top: 8px;">Usa el botón + para agregar amigos</p>
+      </div>
+    `;
+    return;
+  }
+  
   usuarios.forEach(usuario => {
+    // No mostrar el usuario actual en la lista
+    if (currentUser && usuario.usuario === currentUser.usuario) return;
+    
     const div = document.createElement('div');
     div.className = 'chat-item';
     div.onclick = () => seleccionarUsuario(usuario.id, usuario.usuario);
@@ -441,7 +600,12 @@ function mostrarUsuarios(usuarios) {
         <div class="chat-name">${usuario.usuario}</div>
         <div class="chat-last-message">Toca para chatear</div>
       </div>
-      <div class="chat-time">ahora</div>
+      <div class="chat-time">
+        <span>ahora</span>
+        <button class="remove-friend-btn" onclick="event.stopPropagation(); removerAmigo('${usuario.usuario}')" title="Remover amigo">
+          ❌
+        </button>
+      </div>
     `;
     lista.appendChild(div);
   });

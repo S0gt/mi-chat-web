@@ -101,6 +101,61 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
+// Endpoint para obtener amigos del usuario actual
+app.get('/api/friends', (req, res) => {
+  const username = req.query.username;
+  if (!username) {
+    return res.json({ success: false, error: 'Username requerido' });
+  }
+  
+  const friends = db.getFriends(username);
+  const friendsData = friends.map(friendName => {
+    const user = db.users.get(friendName);
+    return user ? {
+      id: user.id,
+      usuario: user.usuario,
+      email: user.email,
+      avatar: user.avatar,
+      ultimo_acceso: user.ultimo_acceso
+    } : null;
+  }).filter(Boolean);
+  
+  console.log(`👥 ${username} tiene ${friendsData.length} amigos`);
+  res.json({ success: true, friends: friendsData });
+});
+
+// Endpoint para agregar amigo
+app.post('/api/add-friend', (req, res) => {
+  try {
+    const { username, friendUsername } = req.body;
+    
+    if (!username || !friendUsername) {
+      return res.json({ success: false, error: 'Username y friendUsername requeridos' });
+    }
+    
+    db.addFriend(username, friendUsername);
+    res.json({ success: true, message: 'Amigo agregado exitosamente' });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// Endpoint para remover amigo
+app.post('/api/remove-friend', (req, res) => {
+  try {
+    const { username, friendUsername } = req.body;
+    
+    if (!username || !friendUsername) {
+      return res.json({ success: false, error: 'Username y friendUsername requeridos' });
+    }
+    
+    db.removeFriend(username, friendUsername);
+    res.json({ success: true, message: 'Amigo removido exitosamente' });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
 // API para obtener mensajes
 app.get('/api/messages', async (req, res) => {
     try {

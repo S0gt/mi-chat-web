@@ -71,6 +71,9 @@ class SimpleDatabase {
         // Mensajes del chat
         this.messages = [];
         
+        // Sistema de amigos
+        this.friendships = new Map(); // user1 -> [user2, user3, ...]
+        
         // Usuarios conectados
         this.activeUsers = new Map();
         
@@ -78,8 +81,28 @@ class SimpleDatabase {
         this.nextUserId = 3;
         this.nextMessageId = 1;
         
+        // Inicializar algunas amistades por defecto
+        this.initDefaultFriendships();
+        
         console.log('📂 Base de datos simple inicializada');
         console.log('👥 Usuarios por defecto: admin/admin123, test/test123');
+    }
+    
+    // ===============================
+    // INICIALIZACIÓN
+    // ===============================
+    
+    initDefaultFriendships() {
+        // JUANMANTECA es amigo de Juan y Roberto
+        this.friendships.set('JUANMANTECA', ['Juan', 'Roberto']);
+        this.friendships.set('Juan', ['JUANMANTECA', 'Roberto']);
+        this.friendships.set('Roberto', ['JUANMANTECA', 'Juan']);
+        
+        // admin y test son amigos para pruebas
+        this.friendships.set('admin', ['test']);
+        this.friendships.set('test', ['admin']);
+        
+        console.log('👥 Amistades por defecto inicializadas');
     }
     
     // ===============================
@@ -191,6 +214,63 @@ class SimpleDatabase {
     
     getActiveUsers() {
         return Array.from(this.activeUsers.keys());
+    }
+    
+    // ===============================
+    // MÉTODOS DE AMIGOS
+    // ===============================
+    
+    getFriends(username) {
+        return this.friendships.get(username) || [];
+    }
+    
+    addFriend(username, friendUsername) {
+        // Verificar que ambos usuarios existen
+        if (!this.users.has(username) || !this.users.has(friendUsername)) {
+            throw new Error('Usuario no encontrado');
+        }
+        
+        // Agregar amistad bidireccional
+        if (!this.friendships.has(username)) {
+            this.friendships.set(username, []);
+        }
+        if (!this.friendships.has(friendUsername)) {
+            this.friendships.set(friendUsername, []);
+        }
+        
+        const userFriends = this.friendships.get(username);
+        const friendFriends = this.friendships.get(friendUsername);
+        
+        // Evitar duplicados
+        if (!userFriends.includes(friendUsername)) {
+            userFriends.push(friendUsername);
+        }
+        if (!friendFriends.includes(username)) {
+            friendFriends.push(username);
+        }
+        
+        console.log(`👥 ${username} y ${friendUsername} ahora son amigos`);
+    }
+    
+    removeFriend(username, friendUsername) {
+        const userFriends = this.friendships.get(username);
+        const friendFriends = this.friendships.get(friendUsername);
+        
+        if (userFriends) {
+            const index = userFriends.indexOf(friendUsername);
+            if (index > -1) {
+                userFriends.splice(index, 1);
+            }
+        }
+        
+        if (friendFriends) {
+            const index = friendFriends.indexOf(username);
+            if (index > -1) {
+                friendFriends.splice(index, 1);
+            }
+        }
+        
+        console.log(`💔 ${username} y ${friendUsername} ya no son amigos`);
     }
     
     // ===============================
