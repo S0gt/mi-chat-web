@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Mi Chat Web</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-container {
+            background: rgba(255,255,255,0.95);
+            padding: 3rem;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #25d366, #20c997);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2.5rem;
+            color: white;
+            box-shadow: 0 10px 30px rgba(37, 211, 102, 0.3);
+        }
+        
+        .logo-icon:before {
+            content: "💬";
+            font-size: 3rem;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin: 0 0 2rem 0;
+            font-size: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #25d366;
+        }
+        
+        .submit-button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(135deg, #25d366, #20c997);
+            color: white;
+            transition: background 0.3s;
+            margin-bottom: 1rem;
+        }
+        
+        .submit-button:hover {
+            background: linear-gradient(135deg, #20c997, #25d366);
+        }
+        
+        .link-button {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #25d366;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            background: transparent;
+            color: #25d366;
+            text-decoration: none;
+            text-align: center;
+            display: block;
+            transition: all 0.3s;
+        }
+        
+        .link-button:hover {
+            background: #25d366;
+            color: white;
+        }
+        
+        .message {
+            margin-top: 1rem;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            <h1>Mi Chat Web</h1>
+            <p class="subtitle">Inicia sesión para continuar</p>
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <input type="text" id="username" class="form-input" placeholder="👤 Nombre de usuario" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="password" class="form-input" placeholder="🔒 Contraseña" required>
+            </div>
+            <button type="submit" class="submit-button">
+                🚀 Iniciar Sesión
+            </button>
+        </form>
+        
+        <a href="register.html" class="link-button">
+            ✨ ¿No tienes cuenta? Regístrate
+        </a>
+        
+        <div id="message" class="message hidden"></div>
+    </div>
+
+    <script>
+        console.log('🔐 Login page loaded');
+        
+        const loginForm = document.getElementById('loginForm');
+        const message = document.getElementById('message');
+        
+        function showMessage(text, type = 'info') {
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.classList.remove('hidden');
+        }
+        
+        function hideMessage() {
+            message.classList.add('hidden');
+        }
+        
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            showMessage('Iniciando sesión...', 'info');
+            
+            try {
+                const response = await fetch('../backend/login.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: `usuario=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&ajax=1`
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const responseText = await response.text();
+                const data = JSON.parse(responseText);
+                
+                if (data.success) {
+                    showMessage('¡Login exitoso! Redirigiendo...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                } else {
+                    showMessage(data.message || 'Error en el login', 'error');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error login:', error);
+                showMessage('Error de conexión: ' + error.message, 'error');
+            }
+        });
+        
+        // Auto-focus en el primer input
+        document.getElementById('username').focus();
+    </script>
+</body>
+</html>

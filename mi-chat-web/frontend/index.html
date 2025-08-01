@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mi Chat Web</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #25d366;
+      --secondary-color: #075e54;
+      --accent-color: #34b7f1;
+      --background-color: #0b141a;
+      --panel-color: #111b21;
+      --sidebar-color: #131c21;
+      --chat-color: #0b141a;
+      --text-color: #e9edef;
+      --text-secondary: #8696a0;
+      --border-color: #2a3942;
+      --hover-color: #182229;
+      --shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    [data-theme="light"] {
+      --background-color: #f0f2f5;
+      --panel-color: #ffffff;
+      --sidebar-color: #ffffff;
+      --chat-color: #e5ddd5;
+      --text-color: #111b21;
+      --text-secondary: #667781;
+      --border-color: #e9edef;
+      --hover-color: #f5f6f6;
+      --shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--background-color);
+      color: var(--text-color);
+      transition: all 0.3s ease;
+    }
+
+    /* Main Container */
+    .main-container {
+      display: flex;
+      height: 100vh;
+      background: var(--background-color);
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 350px;
+      background: var(--sidebar-color);
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border-color);
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--panel-color);
+      border-bottom: 1px solid var(--border-color);
+      min-height: 70px;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .header-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .header-btn:hover {
+      background: var(--hover-color);
+      color: var(--text-color);
+    }
+
+    /* WebSocket Status */
+    .ws-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .ws-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff4444;
+    }
+
+    .ws-indicator.connected { background: var(--primary-color); }
+    .ws-indicator.connecting { background: #ffa500; }
+
+    /* Search */
+    .search-container {
+      padding: 12px 16px;
+      background: var(--panel-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      background: var(--sidebar-color);
+      color: var(--text-color);
+      font-size: 14px;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    /* Chat List */
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--sidebar-color);
+    }
+
+    .chat-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border-color);
+      transition: background 0.2s;
+    }
+
+    .chat-item:hover {
+      background: var(--hover-color);
+    }
+
+    .chat-item.active {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .chat-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      margin-right: 12px;
+    }
+
+    .chat-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-name {
+      font-weight: 500;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-last-message {
+      color: var(--text-secondary);
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-time {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    /* MAIN CHAT AREA */
+    .main-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--chat-color);
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--panel-color);
+      border-bottom: 1px solid var(--border-color);
+      min-height: 70px;
+    }
+
+    .chat-user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+
+    .chat-user-details h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .chat-user-status {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .chat-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    /* Messages Area */
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='30'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .message {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .message.sent {
+      flex-direction: row-reverse;
+    }
+
+    .message-bubble {
+      max-width: 65%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--panel-color);
+      box-shadow: var(--shadow);
+    }
+
+    .message.sent .message-bubble {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .message-text {
+      margin-bottom: 4px;
+      word-wrap: break-word;
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-align: right;
+    }
+
+    .message.sent .message-time {
+      color: rgba(255,255,255,0.8);
+    }
+
+    /* Message Input */
+    .message-input-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 20px;
+      background: var(--panel-color);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .message-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 24px;
+      background: var(--sidebar-color);
+      color: var(--text-color);
+      font-size: 14px;
+      resize: none;
+      max-height: 100px;
+    }
+
+    .message-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .send-btn {
+      background: var(--primary-color);
+      border: none;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .send-btn:hover {
+      transform: scale(1.05);
+    }
+
+    /* Welcome Screen */
+    .welcome-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    .welcome-icon {
+      font-size: 120px;
+      margin-bottom: 32px;
+      color: var(--text-secondary);
+      opacity: 0.3;
+    }
+
+    .welcome-title {
+      font-size: 36px;
+      margin-bottom: 16px;
+      color: var(--text-color);
+    }
+
+    .welcome-subtitle {
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    /* Dropdowns */
+    .dropdown {
+      position: relative;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: var(--panel-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 200px;
+      z-index: 100;
+      display: none;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: none;
+      background: none;
+      color: var(--text-color);
+      width: 100%;
+      text-align: left;
+    }
+
+    .dropdown-item:hover {
+      background: var(--hover-color);
+    }
+
+    /* Add Button Styles */
+    .add-button {
+      position: relative;
+    }
+
+    .add-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: var(--panel-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 180px;
+      z-index: 100;
+      display: none;
+    }
+
+    .add-dropdown.show {
+      display: block;
+    }
+
+    /* Loading */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: var(--text-secondary);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-color);
+      border-top: 2px solid var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        position: absolute;
+        z-index: 10;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+      }
+
+      .sidebar.show {
+        transform: translateX(0);
+      }
+
+      .main-chat {
+        width: 100%;
+      }
+    }
+
+    /* Scroll Styles */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--sidebar-color);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div class="header-actions">
+          <div class="ws-status">
+            <div class="ws-indicator" id="wsStatus"></div>
+            <span id="wsStatusText">Desconectado</span>
+          </div>
+          <div class="dropdown add-button">
+            <button class="header-btn" id="addButton">
+              <i class="fas fa-plus"></i>
+            </button>
+            <div class="add-dropdown" id="addDropdown">
+              <button class="dropdown-item" id="iniciarChat">
+                <i class="fas fa-comment"></i>
+                <span>Iniciar Chat</span>
+              </button>
+              <button class="dropdown-item" id="agregarUsuario">
+                <i class="fas fa-user-plus"></i>
+                <span>Agregar Usuario</span>
+              </button>
+              <button class="dropdown-item" id="crearGrupo">
+                <i class="fas fa-users"></i>
+                <span>Crear Grupo</span>
+              </button>
+            </div>
+          </div>
+          <button class="header-btn" id="themeToggle">
+            <i class="fas fa-moon"></i>
+          </button>
+          <div class="dropdown">
+            <button class="header-btn" id="menuBtn">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="dropdown-menu" id="dropdownMenu">
+              <button class="dropdown-item" id="perfilBtn">
+                <i class="fas fa-user"></i>
+                <span>Perfil</span>
+              </button>
+              <button class="dropdown-item" id="configBtn">
+                <i class="fas fa-cog"></i>
+                <span>Configuración</span>
+              </button>
+              <button class="dropdown-item" id="personalizarBtn">
+                <i class="fas fa-palette"></i>
+                <span>Personalizar</span>
+              </button>
+              <hr style="margin: 8px 0; border: none; border-top: 1px solid var(--border-color);">
+              <button class="dropdown-item" id="cerrarSesion">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Cerrar Sesión</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="search-container">
+        <input type="text" class="search-input" id="buscadorAmigos" placeholder="Buscar o empezar un chat nuevo">
+      </div>
+      
+      <div class="chat-list" id="listaChats">
+        <div class="loading">
+          <div class="spinner"></div>
+          Cargando conversaciones...
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN CHAT AREA -->
+    <div class="main-chat">
+      <div class="chat-header" style="display: none;" id="chatHeader">
+        <div class="chat-user-info">
+          <div class="chat-user-avatar" id="chatUserAvatar">U</div>
+          <div class="chat-user-details">
+            <h3 id="chatUserName">Usuario</h3>
+            <div class="chat-user-status" id="chatUserStatus">en línea</div>
+          </div>
+        </div>
+        <div class="chat-actions">
+          <button class="header-btn" id="callBtn" title="Llamar">
+            <i class="fas fa-phone"></i>
+          </button>
+          <button class="header-btn" id="videoCallBtn" title="Videollamada">
+            <i class="fas fa-video"></i>
+          </button>
+          <button class="header-btn" id="chatMenuBtn">
+            <i class="fas fa-ellipsis-v"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="messages-container" id="mensajes">
+        <div class="welcome-screen">
+          <div class="welcome-icon">
+            <i class="fab fa-whatsapp"></i>
+          </div>
+          <h2 class="welcome-title">Mi Chat Web</h2>
+          <p class="welcome-subtitle">
+            Mantente conectado<br>
+            Chatea con tus amigos, comparte momentos y mantente al día con las conversaciones importantes.
+          </p>
+        </div>
+      </div>
+
+      <div class="message-input-container" style="display: none;" id="inputContainer">
+        <textarea class="message-input" id="input" placeholder="Escribe un mensaje" rows="1"></textarea>
+        <button class="send-btn" id="enviar">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load main script -->
+  <script src="client-final.js"></script>
+</body>
+</html>

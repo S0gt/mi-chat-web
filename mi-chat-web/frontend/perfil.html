@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mi Perfil</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #222d32;
+    }
+    .perfil-container {
+      max-width: 400px;
+      margin: 3rem auto;
+      background: #202c33;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #0006;
+      padding: 2rem;
+      color: #fff;
+    }
+    .perfil-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #25d366;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: #111b21;
+      margin: 0 auto 1rem auto;
+    }
+    .perfil-label {
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+    .perfil-dato {
+      margin-bottom: 1rem;
+      color: #b2dfdb;
+    }
+    .perfil-codigo {
+      background: #111b21;
+      padding: 0.5rem;
+      border-radius: 5px;
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      display: inline-block;
+      color: #25d366;
+    }
+    .perfil-actions {
+      margin-top: 2rem;
+      text-align: center;
+    }
+    .perfil-actions button {
+      background: #25d366;
+      color: #111b21;
+      border: none;
+      border-radius: 5px;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 0 0.5rem;
+    }
+    #avatarForm {
+      margin-top: 1rem;
+      text-align: center;
+    }
+    #avatarInput {
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="perfil-container">
+    <div class="perfil-avatar" id="perfilAvatar">👤</div>
+    <div class="perfil-label">Usuario:</div>
+    <div class="perfil-dato" id="perfilUsuario"></div>
+    <div class="perfil-label">Código de usuario:</div>
+    <div class="perfil-codigo" id="perfilCodigo"></div>
+    <div class="perfil-actions">
+      <button id="volverBtn">Volver al chat</button>
+      <button id="cerrarSesion">Cerrar sesión</button>
+    </div>
+    <form id="avatarForm" enctype="multipart/form-data">
+      <input type="file" id="avatarInput" name="avatar" accept="image/*">
+      <button type="submit">Cambiar avatar</button>
+    </form>
+  </div>
+  <script>
+    async function cargarPerfil() {
+      const res = await fetch('../backend/mi_codigo.php');
+      const data = await res.json();
+      document.getElementById('perfilUsuario').textContent = data.usuario || 'No disponible';
+      document.getElementById('perfilCodigo').textContent = data.codigo || 'No disponible';
+      const avatarDiv = document.getElementById('perfilAvatar');
+      if (data.avatar) {
+        avatarDiv.innerHTML = '';
+        avatarDiv.style.backgroundImage = `url('../uploads/avatars/${data.avatar}')`;
+        avatarDiv.style.backgroundSize = 'cover';
+        avatarDiv.style.backgroundPosition = 'center';
+      } else {
+        avatarDiv.innerHTML = '👤';
+        avatarDiv.style.backgroundImage = '';
+      }
+    }
+    cargarPerfil();
+
+    document.getElementById('volverBtn').onclick = function() {
+      window.location.href = 'index.html';
+    };
+    document.getElementById('cerrarSesion').onclick = async function() {
+      await fetch('../backend/logout.php');
+      window.location.href = '../backend/login.php';
+    };
+    document.getElementById('avatarForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const input = document.getElementById('avatarInput');
+      if (input.files.length === 0) return;
+      const formData = new FormData();
+      formData.append('avatar', input.files[0]);
+      const res = await fetch('../backend/subir_avatar.php', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Avatar actualizado');
+        cargarPerfil();
+      } else {
+        alert(data.error || 'No se pudo actualizar el avatar');
+      }
+    };
+  </script>
+</body>
+</html>
