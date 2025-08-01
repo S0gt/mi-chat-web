@@ -209,28 +209,43 @@
             showMessage('Iniciando sesión...', 'info');
             
             try {
-                const response = await fetch('../backend/login.php', {
+                const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
+                        'Content-Type': 'application/json'
                     },
-                    body: `usuario=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&ajax=1`
+                    body: JSON.stringify({
+                        usuario: username,
+                        password: password
+                    })
                 });
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
                 
-                const responseText = await response.text();
-                const data = JSON.parse(responseText);
+                const data = await response.json();
                 
-                if (data.success) {
+                if (data.success && data.logueado) {
+                    console.log('✅ Login exitoso, datos recibidos:', data);
+                    
+                    // Guardar datos de sesión
+                    localStorage.setItem('usuario', data.usuario);
+                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('user_id', data.user_id);
+                    
+                    console.log('💾 Datos guardados en localStorage:', {
+                        usuario: localStorage.getItem('usuario'),
+                        isLoggedIn: localStorage.getItem('isLoggedIn'),
+                        user_id: localStorage.getItem('user_id')
+                    });
+                    
                     showMessage('¡Login exitoso! Redirigiendo...', 'success');
                     setTimeout(() => {
                         window.location.href = 'index.html';
                     }, 1000);
                 } else {
-                    showMessage(data.message || 'Error en el login', 'error');
+                    showMessage(data.error || 'Credenciales incorrectas', 'error');
                 }
                 
             } catch (error) {

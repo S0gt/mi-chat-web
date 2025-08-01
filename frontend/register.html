@@ -6,8 +6,17 @@
     <title>Registro - Mi Chat Web</title>
     <style>
         * {
-            margin: 0;
-            padding: 0;
+            margin: 0;                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        usuario: username,
+                        password: password,
+                        email: email
+                    })
+                });      padding: 0;
             box-sizing: border-box;
         }
         
@@ -237,12 +246,16 @@
             showMessage('Creando cuenta...', 'info');
             
             try {
-                const response = await fetch('../backend/registro.php', {
+                const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
+                        'Content-Type': 'application/json'
                     },
-                    body: `usuario=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&ajax=1`
+                    body: JSON.stringify({
+                        usuario: username,
+                        password: password,
+                        email: email
+                    })
                 });
                 
                 if (!response.ok) {

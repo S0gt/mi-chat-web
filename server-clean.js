@@ -76,22 +76,13 @@ app.post('/api/login', async (req, res) => {
 
 // API para verificar sesión
 app.get('/api/sesion', (req, res) => {
-    // Para esta implementación simple, la sesión se maneja en el frontend
-    // El cliente verificará localStorage y enviará los datos necesarios
     res.json({ 
-        logueado: true,  // Cambiar a true para que client.js funcione
-        message: 'Sesión verificada en cliente'
+        logueado: false,
+        message: 'Usar login endpoint'
     });
 });
 
-// Endpoint para obtener mensajes
-app.get('/api/messages', (req, res) => {
-  const messages = db.getAllMessages();
-  console.log(`📨 Devolviendo ${messages.length} mensajes`);
-  res.json({ success: true, messages: messages });
-});
-
-// Endpoint para obtener usuarios
+// API para obtener usuarios
 app.get('/api/users', async (req, res) => {
     try {
         const users = await db.getAllUsers();
@@ -167,12 +158,11 @@ wss.on('connection', (ws, req) => {
     ws.on('message', async (data) => {
         try {
             const message = JSON.parse(data);
-            console.log('📨 Mensaje WebSocket recibido:', message.tipo || message.type, 'de:', message.usuario || message.username);
+            console.log('📨 Mensaje WebSocket recibido:', message.type);
             
-            switch (message.tipo || message.type) {  // Aceptar tanto tipo como type
+            switch (message.type) {
                 case 'join':
-                case 'login':  // Agregar login como alias de join
-                    connectedUser = message.usuario || message.username;
+                    connectedUser = message.usuario;
                     db.setUserActive(connectedUser, ws);
                     
                     // Enviar usuarios activos

@@ -7,13 +7,49 @@
 
 class SimpleDatabase {
     constructor() {
-        // Usuarios registrados
+        // Usuarios REALES de tu base de datos MySQL
         this.users = new Map([
+            // Usuarios de tu DB original (passwords sin hash para pruebas)
+            ['JUANMANTECA', {
+                id: 4,
+                usuario: 'JUANMANTECA',
+                password: 'juanmanteca123', // password real
+                email: 'juan@chat.com',
+                codigo: '4M1HS9',
+                avatar: '688a8a9c13ff5.jpg',
+                fecha_registro: '2025-07-30',
+                ultimo_acceso: new Date().toISOString(),
+                activo: true
+            }],
+            ['Juan', {
+                id: 5,
+                usuario: 'Juan',
+                password: 'juan123', // password real  
+                email: 'juan2@chat.com',
+                codigo: 'PDCMZU',
+                avatar: '',
+                fecha_registro: '2025-07-30',
+                ultimo_acceso: new Date().toISOString(),
+                activo: true
+            }],
+            ['Roberto', {
+                id: 6,
+                usuario: 'Roberto',
+                password: 'roberto123', // password real
+                email: 'roberto@chat.com', 
+                codigo: '3GYR5N',
+                avatar: '',
+                fecha_registro: '2025-07-30',
+                ultimo_acceso: new Date().toISOString(),
+                activo: true
+            }],
+            // Usuarios de prueba simples
             ['admin', {
                 id: 1,
                 usuario: 'admin',
-                password: 'admin123', // En producción usar bcrypt
+                password: 'admin123',
                 email: 'admin@chat.com',
+                codigo: 'ADMIN1',
                 avatar: '',
                 fecha_registro: new Date().toISOString(),
                 ultimo_acceso: new Date().toISOString(),
@@ -24,6 +60,7 @@ class SimpleDatabase {
                 usuario: 'test',
                 password: 'test123',
                 email: 'test@chat.com',
+                codigo: 'TEST01',
                 avatar: '',
                 fecha_registro: new Date().toISOString(),
                 ultimo_acceso: new Date().toISOString(),
@@ -111,7 +148,12 @@ class SimpleDatabase {
                 fecha: new Date(msg.fecha).toISOString()
             }));
     }
-    
+
+    // Obtener todos los mensajes
+    getAllMessages() {
+        return this.messages;
+    }
+
     async saveMessage(messageData) {
         const { usuario, mensaje, tipo = 'texto' } = messageData;
         

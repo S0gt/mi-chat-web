@@ -73,10 +73,24 @@ async function inicializarAplicacion() {
 
 async function obtenerInfoSesion() {
   try {
-    const response = await fetch('/api/sesion');
-    const data = await response.json();
-    console.log('📊 Datos de sesión:', data);
-    return data;
+    // Verificar localStorage primero
+    const usuario = localStorage.getItem('usuario');
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const user_id = localStorage.getItem('user_id');
+    
+    console.log('🔍 Verificando localStorage:', {usuario, isLoggedIn, user_id});
+    
+    if (usuario && isLoggedIn === 'true') {
+      console.log('✅ Sesión encontrada en localStorage');
+      return {
+        logueado: true,
+        usuario: usuario,
+        usuario_id: parseInt(user_id) || 0  // Cambiar user_id por usuario_id
+      };
+    }
+    
+    console.log('❌ No hay sesión en localStorage');
+    return { logueado: false };
   } catch (error) {
     console.error('Error obteniendo sesión:', error);
     return { logueado: false };
@@ -214,6 +228,7 @@ function setupEventListeners() {
   const themeToggle = document.getElementById('themeToggle');
   if (themeToggle) {
     themeToggle.onclick = toggleTheme;
+    console.log('✅ Theme toggle configurado');
   }
   
   // Input de mensaje
@@ -221,21 +236,63 @@ function setupEventListeners() {
   if (input) {
     input.addEventListener('keypress', handleMessageInput);
     input.addEventListener('input', handleTyping);
+    console.log('✅ Input de mensaje configurado');
   }
   
   // Botón enviar
-  const sendBtn = document.getElementById('sendBtn');
+  const sendBtn = document.getElementById('enviar');
   if (sendBtn) {
     sendBtn.onclick = enviarMensaje;
+    console.log('✅ Botón enviar configurado');
   }
   
-  // Botón agregar usuario
-  const addUserBtn = document.getElementById('addUserBtn');
-  if (addUserBtn) {
-    addUserBtn.onclick = mostrarModalAgregarUsuario;
+  // Cerrar sesión
+  const cerrarSesion = document.getElementById('cerrarSesion');
+  if (cerrarSesion) {
+    cerrarSesion.onclick = () => {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    };
+    console.log('✅ Cerrar sesión configurado');
   }
   
-  console.log('✅ Event listeners configurados');
+  // Dropdown del menú
+  const menuBtn = document.getElementById('menuBtn');
+  const dropdownMenu = document.getElementById('dropdownMenu');
+  if (menuBtn && dropdownMenu) {
+    menuBtn.onclick = (e) => {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle('show');
+    };
+    
+    document.addEventListener('click', () => {
+      dropdownMenu.classList.remove('show');
+    });
+    console.log('✅ Dropdown menú configurado');
+  }
+  
+  // Dropdown del botón agregar
+  const addButton = document.getElementById('addButton');
+  const addDropdown = document.getElementById('addDropdown');
+  if (addButton && addDropdown) {
+    addButton.onclick = (e) => {
+      e.stopPropagation();
+      addDropdown.classList.toggle('show');
+    };
+    
+    document.addEventListener('click', () => {
+      addDropdown.classList.remove('show');
+    });
+    console.log('✅ Dropdown agregar configurado');
+  }
+  
+  // Actualizar avatar del usuario en el header
+  const userAvatar = document.getElementById('userAvatar');
+  if (userAvatar && currentUser) {
+    userAvatar.textContent = currentUser.usuario.charAt(0).toUpperCase();
+  }
+  
+  console.log('✅ Event listeners configurados completamente');
 }
 
 // ========================================
@@ -275,29 +332,18 @@ async function enviarMensaje() {
     return;
   }
   
+  console.log('📤 Enviando mensaje:', mensaje);
+  
   try {
-    let endpoint, data;
-    
-    if (usuarioSeleccionado) {
-      // Mensaje privado
-      endpoint = '/api/send_message';
-      data = {
-        receptor_id: usuarioSeleccionado.id,
-        mensaje: mensaje
-      };
-    } else if (grupoSeleccionado) {
-      // Mensaje de grupo
-      endpoint = '/api/send_grupo_message';
-      data = {
-        grupo_id: grupoSeleccionado.id,
-        mensaje: mensaje
-      };
-    }
-    
-    const response = await fetch(endpoint, {
+    // Para esta implementación simple, usar la API de send_message
+    const response = await fetch('/api/send_message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify({
+        usuario: currentUser.usuario,
+        mensaje: mensaje,
+        destinatario: usuarioSeleccionado ? usuarioSeleccionado.nombre : null
+      })
     });
     
     const result = await response.json();
@@ -306,30 +352,28 @@ async function enviarMensaje() {
       // Limpiar input
       input.value = '';
       
+      // Mostrar mensaje inmediatamente
+      const nuevoMensaje = {
+        usuario: currentUser.usuario,
+        mensaje: mensaje,
+        fecha: new Date().toISOString(),
+        tipo: 'texto'
+      };
+      mostrarMensajeEnChat(nuevoMensaje, false);
+      
       // Enviar por WebSocket si está conectado
       if (ws && ws.readyState === WebSocket.OPEN) {
         const wsData = {
           tipo: 'mensaje',
           mensaje: mensaje,
-          de: currentUser.usuario_id,
+          usuario: currentUser.usuario,
           timestamp: new Date().toISOString()
         };
-        
-        if (usuarioSeleccionado) {
-          wsData.para = usuarioSeleccionado.id;
-        } else if (grupoSeleccionado) {
-          wsData.grupo_id = grupoSeleccionado.id;
-        }
         
         ws.send(JSON.stringify(wsData));
       }
       
-      // Recargar mensajes
-      if (usuarioSeleccionado) {
-        await cargarMensajes(usuarioSeleccionado.id);
-      } else if (grupoSeleccionado) {
-        await cargarMensajesGrupo(grupoSeleccionado.id);
-      }
+      console.log('✅ Mensaje enviado correctamente');
       
     } else {
       showToast('error', result.error || 'Error al enviar mensaje');
@@ -382,25 +426,24 @@ async function cargarUsuarios() {
 }
 
 function mostrarUsuarios(usuarios) {
-  const lista = document.getElementById('usuarios');
+  const lista = document.getElementById('listaChats');  // Cambiar usuarios por listaChats
   if (!lista) return;
   
   lista.innerHTML = '';
   
   usuarios.forEach(usuario => {
-    const li = document.createElement('li');
-    li.innerHTML = `
-      <div class="user-item" onclick="seleccionarUsuario(${usuario.id}, '${usuario.usuario}')">
-        <div class="user-avatar">
-          <img src="${usuario.avatar || '../uploads/default-avatar.png'}" alt="${usuario.usuario}">
-        </div>
-        <div class="user-info">
-          <div class="user-name">${usuario.usuario}</div>
-          <div class="user-status">En línea</div>
-        </div>
+    const div = document.createElement('div');
+    div.className = 'chat-item';
+    div.onclick = () => seleccionarUsuario(usuario.id, usuario.usuario);
+    div.innerHTML = `
+      <div class="chat-avatar">${usuario.usuario.charAt(0).toUpperCase()}</div>
+      <div class="chat-info">
+        <div class="chat-name">${usuario.usuario}</div>
+        <div class="chat-last-message">Toca para chatear</div>
       </div>
+      <div class="chat-time">ahora</div>
     `;
-    lista.appendChild(li);
+    lista.appendChild(div);
   });
 }
 
@@ -410,33 +453,77 @@ function seleccionarUsuario(id, username) {
   
   console.log('👤 Usuario seleccionado:', username);
   
-  // Actualizar interfaz
+  // Mostrar el header del chat
   const chatHeader = document.getElementById('chatHeader');
   if (chatHeader) {
-    chatHeader.textContent = username;
+    chatHeader.style.display = 'flex';
   }
   
-  // Cargar mensajes
-  cargarMensajes(id);
+  // Actualizar nombre del usuario
+  const chatUserName = document.getElementById('chatUserName');
+  if (chatUserName) {
+    chatUserName.textContent = username;
+  }
+  
+  // Actualizar avatar del usuario
+  const chatUserAvatar = document.getElementById('chatUserAvatar');
+  if (chatUserAvatar) {
+    chatUserAvatar.textContent = username.charAt(0).toUpperCase();
+  }
+  
+  // Mostrar el contenedor de input
+  const inputContainer = document.getElementById('inputContainer');
+  if (inputContainer) {
+    inputContainer.style.display = 'flex';
+  }
+  
+  // Ocultar welcome screen
+  const mensajes = document.getElementById('mensajes');
+  if (mensajes) {
+    mensajes.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary);">Cargando mensajes...</div>';
+  }
   
   // Activar input
   const input = document.getElementById('input');
   if (input) {
     input.disabled = false;
     input.placeholder = `Escribe un mensaje a ${username}...`;
+    input.focus();
   }
+  
+  // Marcar como activo en la lista
+  document.querySelectorAll('.chat-item').forEach(item => item.classList.remove('active'));
+  event.target.closest('.chat-item').classList.add('active');
+  
+  // Cargar mensajes
+  cargarMensajes(id);
 }
 
 async function cargarMensajes(userId) {
   try {
-    const response = await fetch(`/api/messages?user_id=${userId}`);
+    console.log('📥 Cargando mensajes para usuario:', userId);
+    
+    const response = await fetch('/api/messages');
     const data = await response.json();
     
     if (data.success) {
-      mostrarMensajes(data.messages);
+      // Filtrar mensajes relacionados con el usuario seleccionado
+      const mensajesFiltrados = data.messages.filter(msg => 
+        msg.usuario === usuarioSeleccionado.nombre || 
+        msg.destinatario === usuarioSeleccionado.nombre ||
+        msg.de === usuarioSeleccionado.nombre ||
+        msg.para === usuarioSeleccionado.nombre
+      );
+      
+      console.log(`📥 ${mensajesFiltrados.length} mensajes cargados`);
+      mostrarMensajes(mensajesFiltrados);
+    } else {
+      console.log('📥 No hay mensajes o error:', data.error);
+      mostrarMensajes([]);
     }
   } catch (error) {
     console.error('Error cargando mensajes:', error);
+    mostrarMensajes([]);
   }
 }
 
@@ -454,10 +541,22 @@ async function cargarMensajesGrupo(grupoId) {
 }
 
 function mostrarMensajes(mensajes) {
-  const messagesContainer = document.getElementById('messages');
+  const messagesContainer = document.getElementById('mensajes');
   if (!messagesContainer) return;
   
+  // Limpiar contenedor
   messagesContainer.innerHTML = '';
+  
+  if (mensajes.length === 0) {
+    messagesContainer.innerHTML = `
+      <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+        <i class="fas fa-comment" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i><br>
+        No hay mensajes aún.<br>
+        <small>¡Envía el primer mensaje!</small>
+      </div>
+    `;
+    return;
+  }
   
   mensajes.forEach(mensaje => {
     mostrarMensajeEnChat(mensaje, !!mensaje.grupo_id);
@@ -468,28 +567,30 @@ function mostrarMensajes(mensajes) {
 }
 
 function mostrarMensajeEnChat(mensaje, esGrupo) {
-  const messagesContainer = document.getElementById('messages');
+  const messagesContainer = document.getElementById('mensajes');
   if (!messagesContainer) return;
   
   const div = document.createElement('div');
   const esPropio = currentUser && 
-    (mensaje.emisor_id == currentUser.usuario_id || mensaje.de == currentUser.usuario_id);
+    (mensaje.emisor_id == currentUser.usuario_id || mensaje.de == currentUser.usuario_id || mensaje.usuario == currentUser.usuario);
   
-  div.className = `message ${esPropio ? 'own' : 'other'}`;
+  div.className = `message ${esPropio ? 'sent' : 'received'}`;
   
   let contenido = `
-    <div class="message-content">
-      <div class="message-text">${mensaje.mensaje}</div>
-      <div class="message-time">${formatearTiempo(mensaje.fecha_envio || mensaje.timestamp)}</div>
+    <div class="message-bubble">
+      <div class="message-text">${mensaje.mensaje || mensaje.texto || 'Mensaje sin contenido'}</div>
+      <div class="message-time">${formatearTiempo(mensaje.fecha_envio || mensaje.fecha || mensaje.timestamp || new Date())}</div>
     </div>
   `;
   
   if (esGrupo && !esPropio) {
     contenido = `
-      <div class="message-content">
-        <div class="message-sender">${mensaje.emisor || mensaje.username}</div>
-        <div class="message-text">${mensaje.mensaje}</div>
-        <div class="message-time">${formatearTiempo(mensaje.fecha_envio || mensaje.timestamp)}</div>
+      <div class="message-bubble">
+        <div class="message-sender" style="font-weight: bold; font-size: 12px; margin-bottom: 4px; color: var(--primary-color);">
+          ${mensaje.emisor || mensaje.username || 'Usuario'}
+        </div>
+        <div class="message-text">${mensaje.mensaje || mensaje.texto || 'Mensaje sin contenido'}</div>
+        <div class="message-time">${formatearTiempo(mensaje.fecha_envio || mensaje.fecha || mensaje.timestamp || new Date())}</div>
       </div>
     `;
   }
