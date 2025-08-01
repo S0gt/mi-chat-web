@@ -623,6 +623,27 @@
   </div>
 
   <!-- Load main script -->
-  <script src="client-final.js"></script>
+  <script src="client.js"></script>
+  
+  <!-- Verificación de sesión -->
+  <script>
+    // Verificar si el usuario está logueado al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+      const usuario = localStorage.getItem('usuario');
+      const isLoggedIn = localStorage.getItem('isLoggedIn');
+      
+      console.log('🔍 Verificando sesión:', {usuario, isLoggedIn});
+      
+      // Si no está logueado, redirigir al login
+      if (!usuario || !isLoggedIn) {
+        console.log('❌ Usuario no logueado, redirigiendo al login...');
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      console.log('✅ Usuario logueado:', usuario);
+      // El resto de la inicialización se hace en client.js
+    });
+  </script>
 </body>
 </html>
